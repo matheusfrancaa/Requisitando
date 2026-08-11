@@ -18,32 +18,63 @@ async function startServer() {
       return res.status(400).json({ error: "URL is required" });
     }
 
-    // Resolve relative URLs or localhost URLs to local server port
+    // Resolve relative URLs, localhost URLs, or app dev container URLs to local server port
     let targetUrl = url.trim();
-    if (targetUrl.startsWith("/")) {
-      targetUrl = `http://127.0.0.1:${PORT}${targetUrl}`;
+    const hostHeader = req.get("host") || "";
+    const isLocalHost = 
+      targetUrl.startsWith("/") ||
+      targetUrl.includes("localhost") ||
+      targetUrl.includes("127.0.0.1") ||
+      targetUrl.includes(".run.app") ||
+      (hostHeader && targetUrl.includes(hostHeader));
+
+    if (isLocalHost) {
+      try {
+        if (targetUrl.startsWith("/")) {
+          targetUrl = `http://127.0.0.1:${PORT}${targetUrl}`;
+        } else {
+          const parsed = new URL(targetUrl);
+          targetUrl = `http://127.0.0.1:${PORT}${parsed.pathname}${parsed.search}`;
+        }
+      } catch (e) {
+        if (!targetUrl.startsWith("http")) {
+          targetUrl = `http://127.0.0.1:${PORT}/${targetUrl.replace(/^\/+/, "")}`;
+        }
+      }
     }
 
     const startTime = performance.now();
 
     try {
+      // Normalize headers for fetch request
+      const normalizedHeaders: Record<string, string> = {
+        "user-agent": "APITestingTool/1.0.0",
+      };
+
+      if (headers && typeof headers === "object") {
+        Object.entries(headers).forEach(([k, v]) => {
+          if (k && v !== undefined) {
+            normalizedHeaders[k.toLowerCase()] = String(v);
+          }
+        });
+      }
+
       const fetchOptions: RequestInit = {
-        method,
-        headers: {
-          ...headers,
-          // Set a user agent to mimic regular browser requests/Postman
-          "User-Agent": "APITestingTool/1.0.0",
-        },
+        method: method.toUpperCase(),
+        headers: normalizedHeaders,
       };
 
       if (["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase()) && body !== undefined) {
-        if (typeof body === "object") {
+        if (typeof body === "object" && body !== null) {
           fetchOptions.body = JSON.stringify(body);
-          if (!fetchOptions.headers["content-type"]) {
-            (fetchOptions.headers as Record<string, string>)["content-type"] = "application/json";
+          if (!normalizedHeaders["content-type"]) {
+            normalizedHeaders["content-type"] = "application/json";
           }
         } else {
           fetchOptions.body = String(body);
+          if (!normalizedHeaders["content-type"]) {
+            normalizedHeaders["content-type"] = "text/plain";
+          }
         }
       }
 
