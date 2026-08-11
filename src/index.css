@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/* Force system hand cursor (maozinha) on all clickable elements */
+button,
+a,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+select,
+summary,
+.cursor-pointer,
+[onClick] {
+  cursor: pointer !important;
+}
+
+button *,
+a *,
+[role="button"] *,
+.cursor-pointer * {
+  cursor: pointer !important;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Global Custom Minimalist Dark Scrollbars with Orange Thumbs */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0c0e10;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ff6c37;
+  border-radius: 9999px;
+  border: 1px solid #0c0e10;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e05624;
+}
+
+/* Support Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ff6c37 #0c0e10;
+}
+
