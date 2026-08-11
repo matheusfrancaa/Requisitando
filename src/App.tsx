@@ -13,6 +13,7 @@ import {
   initialCollections, 
   initialHistory 
 } from "./data/initialData";
+import { dispatchClientSideRequest } from "./lib/clientDispatcher";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import RequestEditor from "./components/RequestEditor";
@@ -388,25 +389,43 @@ export default function App() {
         }
       }
 
-      // 4. Send request through our secure /api/proxy endpoint
-      const proxyResponse = await fetch("/api/proxy", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: resolvedUrl,
-          method: activeRequest.method,
-          headers: reqHeaders,
-          body: resolvedBody,
-        }),
-      });
+      // 4. Send request through our secure /api/proxy endpoint, fallback to client dispatcher if 404/static host
+      let responseData: ApiResponse;
 
-      if (!proxyResponse.ok) {
-        throw new Error(`Proxy returned status code ${proxyResponse.status}`);
+      try {
+        const proxyResponse = await fetch("/api/proxy", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            url: resolvedUrl,
+            method: activeRequest.method,
+            headers: reqHeaders,
+            body: resolvedBody,
+          }),
+        });
+
+        if (proxyResponse.ok) {
+          responseData = await proxyResponse.json();
+        } else {
+          // If proxy is missing or returning 404 (e.g., static hosting like Netlify), use client-side dispatcher
+          responseData = await dispatchClientSideRequest(
+            resolvedUrl,
+            activeRequest.method,
+            reqHeaders,
+            resolvedBody
+          );
+        }
+      } catch (err) {
+        // Network error trying to reach /api/proxy -> use client-side dispatcher
+        responseData = await dispatchClientSideRequest(
+          resolvedUrl,
+          activeRequest.method,
+          reqHeaders,
+          resolvedBody
+        );
       }
-
-      const responseData: ApiResponse = await proxyResponse.json();
 
       // 5. Cache response for this active tab
       setTabResponses((prev) => ({
