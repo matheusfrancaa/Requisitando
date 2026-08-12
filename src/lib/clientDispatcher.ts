@@ -9,8 +9,8 @@ function tryParseJson(text: string) {
 }
 
 /**
- * Fallback request dispatcher for static hosting environments (such as Netlify, Vercel, GitHub Pages)
- * where the Node Express server (/api/proxy) is not present.
+ * Fallback request dispatcher for static client environments
+ * when the Node Express server (/api/proxy) is not responding.
  */
 export async function dispatchClientSideRequest(
   url: string,
@@ -175,7 +175,7 @@ export async function dispatchClientSideRequest(
       headers: {},
       body: {
         error: "Bloqueio de Conteúdo Misto (Mixed Content)",
-        message: "O site está rodando em HTTPS (Netlify) e tentou requisitar um endereço HTTP não seguro (" + targetUrl + "). O navegador bloqueia essa ação por segurança.",
+        message: "O site está rodando em HTTPS e tentou requisitar um endereço HTTP não seguro (" + targetUrl + "). O navegador bloqueia essa ação por segurança.",
         tip: "Utilize HTTPS na URL de destino (ex: https://sua-api.com) para permitir a conexão.",
       },
       time: durationMs,
@@ -240,7 +240,7 @@ export async function dispatchClientSideRequest(
       body: {
         error: "Falha ao enviar requisição diretamente pelo navegador",
         message: err.message || "Requisição bloqueada por política CORS ou erro de rede",
-        tip: "A API de destino precisa retornar o cabeçalho 'Access-Control-Allow-Origin: *' para aceitar requisições diretas do navegador no Netlify. Garantimos que o 'netlify.toml' com 'netlify/functions/proxy.js' já está configurado no seu repositório para contornar o CORS no próximo deploy do Netlify!",
+        tip: "A API de destino precisa permitir requisições CORS ou o backend Railway precisa estar rodando.",
       },
       time: durationMs,
       size: 0,

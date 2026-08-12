@@ -409,7 +409,7 @@ export default function App() {
         if (proxyResponse.ok) {
           responseData = await proxyResponse.json();
         } else {
-          // If proxy is missing or returning 404 (e.g., static hosting like Netlify), use client-side dispatcher
+          // Fallback if proxy endpoint returns error
           responseData = await dispatchClientSideRequest(
             resolvedUrl,
             activeRequest.method,
