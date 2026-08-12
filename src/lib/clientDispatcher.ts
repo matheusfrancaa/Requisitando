@@ -36,8 +36,11 @@ export async function dispatchClientSideRequest(
     pathname = targetUrl;
   }
 
-  // 1. Check if the request is targeting built-in Mock API Endpoints
-  if (pathname.includes("/api/v1/auth/login") || pathname.endsWith("/auth/login")) {
+  // 1. Check if the request is targeting built-in Mock API Endpoints or relative path
+  if (
+    pathname.includes("/api/v1/auth/login") ||
+    pathname.endsWith("/auth/login")
+  ) {
     const durationMs = Math.round(performance.now() - startTime);
     const parsedBody = typeof body === "string" ? tryParseJson(body) : body;
     const username = parsedBody?.username || "admin_user";
@@ -67,9 +70,15 @@ export async function dispatchClientSideRequest(
     };
   }
 
-  if (pathname.includes("/api/v1/users/profile") || pathname.endsWith("/users/profile")) {
+  if (
+    pathname.includes("/api/v1/users/profile") ||
+    pathname.endsWith("/users/profile")
+  ) {
     const durationMs = Math.round(performance.now() - startTime);
-    const hasAuth = !!headers["authorization"] || !!headers["Authorization"] || !!headers["authorization".toLowerCase()];
+    const hasAuth =
+      !!headers["authorization"] ||
+      !!headers["Authorization"] ||
+      !!headers["authorization".toLowerCase()];
 
     const responseBody = {
       status: "success",
@@ -99,7 +108,10 @@ export async function dispatchClientSideRequest(
     };
   }
 
-  if (pathname.includes("/api/v1/users/settings") || pathname.endsWith("/users/settings")) {
+  if (
+    pathname.includes("/api/v1/users/settings") ||
+    pathname.endsWith("/users/settings")
+  ) {
     const durationMs = Math.round(performance.now() - startTime);
     const parsedBody = typeof body === "string" ? tryParseJson(body) : body;
 
@@ -123,12 +135,15 @@ export async function dispatchClientSideRequest(
     };
   }
 
-  if (pathname.includes("/api/v1/sessions/current") || pathname.endsWith("/sessions/current")) {
+  if (
+    pathname.includes("/api/v1/sessions/current") ||
+    pathname.endsWith("/sessions/current")
+  ) {
     const durationMs = Math.round(performance.now() - startTime);
 
     const responseBody = {
       status: "success",
-      message: "Current session terminated successfully",
+      message: "Session terminated successfully",
       session_id: "sess_99382104821",
     };
 
@@ -139,6 +154,32 @@ export async function dispatchClientSideRequest(
       body: responseBody,
       time: Math.max(durationMs, 15),
       size: JSON.stringify(responseBody).length,
+    };
+  }
+
+  // Ensure protocol
+  if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://") && !targetUrl.startsWith("/")) {
+    targetUrl = "https://" + targetUrl;
+  }
+
+  // Check HTTP on HTTPS site (Mixed Content)
+  if (
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    targetUrl.startsWith("http://")
+  ) {
+    const durationMs = Math.round(performance.now() - startTime);
+    return {
+      status: 0,
+      statusText: "Mixed Content Error",
+      headers: {},
+      body: {
+        error: "Bloqueio de Conteúdo Misto (Mixed Content)",
+        message: "O site está rodando em HTTPS (Netlify) e tentou requisitar um endereço HTTP não seguro (" + targetUrl + "). O navegador bloqueia essa ação por segurança.",
+        tip: "Utilize HTTPS na URL de destino (ex: https://sua-api.com) para permitir a conexão.",
+      },
+      time: durationMs,
+      size: 0,
     };
   }
 
@@ -194,12 +235,12 @@ export async function dispatchClientSideRequest(
     const durationMs = Math.round(performance.now() - startTime);
     return {
       status: 0,
-      statusText: "Network Error",
+      statusText: "Network / CORS Error",
       headers: {},
       body: {
-        error: "Failed to dispatch request directly from browser",
-        message: err.message || "Network or CORS request failed",
-        tip: "When deployed to static hosts like Netlify, requests are sent directly from the browser. Ensure the target API permits CORS or test valid public URLs.",
+        error: "Falha ao enviar requisição diretamente pelo navegador",
+        message: err.message || "Requisição bloqueada por política CORS ou erro de rede",
+        tip: "A API de destino precisa retornar o cabeçalho 'Access-Control-Allow-Origin: *' para aceitar requisições diretas do navegador no Netlify. Garantimos que o 'netlify.toml' com 'netlify/functions/proxy.js' já está configurado no seu repositório para contornar o CORS no próximo deploy do Netlify!",
       },
       time: durationMs,
       size: 0,
